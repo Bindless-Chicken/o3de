@@ -16,6 +16,7 @@
 #include <Decals/DecalComponent.h>
 #include <DiffuseGlobalIllumination/DiffuseProbeGridComponent.h>
 #include <DiffuseGlobalIllumination/DiffuseGlobalIlluminationComponent.h>
+#include <ProbeGlobalIllumination/ProbeGlobalIlluminationComponent.h>
 #include <Grid/GridComponent.h>
 #include <ImageBasedLights/ImageBasedLightComponent.h>
 #include <Material/MaterialComponent.h>
@@ -48,6 +49,7 @@
 #include <Decals/EditorDecalComponent.h>
 #include <DiffuseGlobalIllumination/EditorDiffuseProbeGridComponent.h>
 #include <DiffuseGlobalIllumination/EditorDiffuseGlobalIlluminationComponent.h>
+#include <ProbeGlobalIllumination/EditorProbeGlobalIlluminationComponent.h>
 #include <Grid/EditorGridComponent.h>
 #include <ImageBasedLights/EditorImageBasedLightComponent.h>
 #include <Material/EditorMaterialComponent.h>
@@ -115,6 +117,7 @@ namespace AZ
                         GradientWeightModifierComponent::CreateDescriptor(),
                         DiffuseProbeGridComponent::CreateDescriptor(),
                         DiffuseGlobalIlluminationComponent::CreateDescriptor(),
+                        ProbeGlobalIlluminationComponent::CreateDescriptor(),
                         DeferredFogComponent::CreateDescriptor(),
                         SurfaceData::SurfaceDataMeshComponent::CreateDescriptor(),
                         AttachmentComponent::CreateDescriptor(),
@@ -149,6 +152,7 @@ namespace AZ
                         EditorGradientWeightModifierComponent::CreateDescriptor(),
                         EditorDiffuseProbeGridComponent::CreateDescriptor(),
                         EditorDiffuseGlobalIlluminationComponent::CreateDescriptor(),
+                        EditorProbeGlobalIlluminationComponent::CreateDescriptor(),
                         EditorDeferredFogComponent::CreateDescriptor(),
                         SurfaceData::EditorSurfaceDataMeshComponent::CreateDescriptor(),
                         EditorAttachmentComponent::CreateDescriptor(),

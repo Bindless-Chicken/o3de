@@ -111,6 +111,10 @@ set(FILES
     Source/Checkerboard/CheckerboardColorResolvePass.h
     Source/Checkerboard/CheckerboardPass.cpp
     Source/Checkerboard/CheckerboardPass.h
+    Source/Cubemap/CubemapRequest.h
+    Source/Cubemap/CubemapRequest.cpp
+    Source/Cubemap/CubemapFeatureProcessor.h
+    Source/Cubemap/CubemapFeatureProcessor.cpp
     Source/Decals/DecalFeatureProcessor.h
     Source/Decals/DecalFeatureProcessor.cpp
     Source/Decals/DecalTextureArray.h
@@ -150,6 +154,10 @@ set(FILES
     Source/DiffuseGlobalIllumination/DiffuseProbeGridVisualizationCompositePass.cpp
     Source/DiffuseGlobalIllumination/DiffuseGlobalIlluminationFeatureProcessor.h
     Source/DiffuseGlobalIllumination/DiffuseGlobalIlluminationFeatureProcessor.cpp
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationFeatureProcessor.h
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationFeatureProcessor.cpp
+    Source/ProbeGlobalIllumination/ProbeGlobalIllumination.h
+    Source/ProbeGlobalIllumination/ProbeGlobalIllumination.cpp
     Source/DisplayMapper/AcesOutputTransformPass.cpp
     Source/DisplayMapper/AcesOutputTransformLutPass.cpp
     Source/DisplayMapper/ApplyShaperLookupTablePass.cpp

@@ -1,0 +1,16 @@
+{
+    "description": "Cubemap visualization material.",
+    "version": 2,
+    "propertyLayout":
+    {
+        "properties":
+        {
+        }
+    },
+    "shaders":
+    [
+        {
+            "file": "./CubemapVisualization.shader"
+        }
+    ]
+}

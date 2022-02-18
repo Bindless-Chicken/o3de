@@ -18,9 +18,11 @@ set(FILES
     Include/Atom/Feature/CoreLights/SimplePointLightFeatureProcessorInterface.h
     Include/Atom/Feature/CoreLights/SimpleSpotLightFeatureProcessorInterface.h
     Include/Atom/Feature/CoreLights/ShadowConstants.h
+    Include/Atom/Feature/Cubemap/CubemapFeatureProcessorInterface.h
     Include/Atom/Feature/Decals/DecalFeatureProcessorInterface.h
     Include/Atom/Feature/DiffuseGlobalIllumination/DiffuseProbeGridFeatureProcessorInterface.h
     Include/Atom/Feature/DiffuseGlobalIllumination/DiffuseGlobalIlluminationFeatureProcessorInterface.h
+    Include/Atom/Feature/ProbeGlobalIllumination/ProbeGlobalIlluminationFeatureProcessorInterface.h
     Include/Atom/Feature/DisplayMapper/DisplayMapperFeatureProcessorInterface.h
     Include/Atom/Feature/ImageBasedLights/ImageBasedLightFeatureProcessorInterface.h
     Include/Atom/Feature/Mesh/MeshFeatureProcessorInterface.h

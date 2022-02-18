@@ -99,6 +99,7 @@
 #include <DiffuseGlobalIllumination/DiffuseProbeGridVisualizationRayTracingPass.h>
 #include <DiffuseGlobalIllumination/DiffuseProbeGridVisualizationCompositePass.h>
 #include <DiffuseGlobalIllumination/DiffuseProbeGridFeatureProcessor.h>
+#include <ProbeGlobalIllumination/ProbeGlobalIlluminationFeatureProcessor.h>
 #include <DiffuseGlobalIllumination/DiffuseGlobalIlluminationFeatureProcessor.h>
 #include <ReflectionScreenSpace/ReflectionScreenSpaceTracePass.h>
 #include <ReflectionScreenSpace/ReflectionScreenSpaceBlurPass.h>
@@ -107,6 +108,7 @@
 #include <ReflectionScreenSpace/ReflectionCopyFrameBufferPass.h>
 #include <OcclusionCullingPlane/OcclusionCullingPlaneFeatureProcessor.h>
 #include <Mesh/ModelReloaderSystem.h>
+#include <Cubemap/CubemapFeatureProcessor.h>
 
 namespace AZ
 {
@@ -141,10 +143,12 @@ namespace AZ
             ImGuiPassData::Reflect(context);
             RayTracingPassData::Reflect(context);
             TaaPassData::Reflect(context);
+            CubemapFeatureProcessor::Reflect(context);
 
             LightingPreset::Reflect(context);
             ModelPreset::Reflect(context);
             DiffuseProbeGridFeatureProcessor::Reflect(context);
+            ProbeGlobalIlluminationFeatureProcessor::Reflect(context);
             DiffuseGlobalIlluminationFeatureProcessor::Reflect(context);
             RayTracingFeatureProcessor::Reflect(context);
             OcclusionCullingPlaneFeatureProcessor::Reflect(context);
@@ -200,10 +204,12 @@ namespace AZ
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessorWithInterface<PostProcessFeatureProcessor, PostProcessFeatureProcessorInterface>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessorWithInterface<AcesDisplayMapperFeatureProcessor, DisplayMapperFeatureProcessorInterface>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessorWithInterface<ProjectedShadowFeatureProcessor, ProjectedShadowFeatureProcessorInterface>();
+            AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessorWithInterface<CubemapFeatureProcessor, CubemapFeatureProcessorInterface>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<ReflectionProbeFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<SMAAFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<DiffuseProbeGridFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<DiffuseGlobalIlluminationFeatureProcessor>();
+            AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<ProbeGlobalIlluminationFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<RayTracingFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->RegisterFeatureProcessor<OcclusionCullingPlaneFeatureProcessor>();
 
@@ -316,6 +322,7 @@ namespace AZ
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<RayTracingFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<DiffuseGlobalIlluminationFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<DiffuseProbeGridFeatureProcessor>();
+            AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<ProbeGlobalIlluminationFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<SMAAFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<ReflectionProbeFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<ProjectedShadowFeatureProcessor>();
@@ -328,6 +335,8 @@ namespace AZ
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<TransformServiceFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<AuxGeomFeatureProcessor>();
             AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<OcclusionCullingPlaneFeatureProcessor>();
+            AZ::RPI::FeatureProcessorFactory::Get()->UnregisterFeatureProcessor<CubemapFeatureProcessor>();
+
         }
 
         void CommonSystemComponent::LoadPassTemplateMappings()

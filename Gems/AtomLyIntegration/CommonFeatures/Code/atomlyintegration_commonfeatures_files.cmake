@@ -50,6 +50,10 @@ set(FILES
     Source/DiffuseGlobalIllumination/DiffuseGlobalIlluminationComponentController.cpp
     Source/DiffuseGlobalIllumination/DiffuseGlobalIlluminationComponentConfig.h
     Source/DiffuseGlobalIllumination/DiffuseGlobalIlluminationComponentConfig.cpp
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationComponent.h
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationComponent.cpp
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationComponentController.h
+    Source/ProbeGlobalIllumination/ProbeGlobalIlluminationComponentController.cpp
     Source/Grid/GridComponent.h
     Source/Grid/GridComponent.cpp
     Source/Grid/GridComponentConfig.cpp

@@ -29,14 +29,22 @@ namespace AZ
                 if (auto* serializeContext = azrtti_cast<SerializeContext*>(context))
                 {
                     serializeContext->Class<EnvironmentCubeMapPassData, PassData>()
-                        ->Version(0)
+                        ->Version(2)
                         ->Field("Position", &EnvironmentCubeMapPassData::m_position)
+                        ->Field("TemplateName", &EnvironmentCubeMapPassData::m_templateName)
+                        ->Field("FaceID", &EnvironmentCubeMapPassData::m_faceID)
                         ;
                 }
             }
 
             //! World space position to render the environment cubemap
             Vector3 m_position;
+
+            //! Name of the template to use for rendering
+            AZ::Name m_templateName;
+
+            //! ID of the pass being rendered (0: X+, 1: X-, 2: Y+, 3: Y-, 4: Z+, 5: Z-)
+            u16 m_faceID;
         };
     } // namespace RPI
 } // namespace AZ

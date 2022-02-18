@@ -22,6 +22,29 @@ namespace AZ
 {
     namespace RPI
     {
+        // # EnvironmentCubeMapPass - Theory of operation
+        // 
+        // This pass renders a cubemap face and copy it back to one face
+        // of the cubemap. Rendering is done using a user provided custom
+        // pass. Only requirement is to have a IO output slot to bind the
+        // resource. A transient resource is used for the temp rendering
+        // before it is passed to a copy pass that will perform the copy
+        // to the correct face in the cubemap.
+        // A transient resource is used for now as the view descriptor
+        // are not passed between passes.
+        // 
+        // [Transient resource] (TransientResult)
+        //                  |
+        //              user pass
+        //                  |
+        // [Transient resource] (TransientResult)
+        //                  |
+        //              copy pass
+        //                  |
+        // [Persistent resource] (Output)
+        //
+
+
         // pass that generates all faces of a Cubemap environment image at a specified point
         class EnvironmentCubeMapPass final
             : public ParentPass
@@ -49,6 +72,8 @@ namespace AZ
 
             // retrieves the rendered cubemap texture format
             RHI::Format GetTextureFormat() const { return m_textureFormat; }
+
+            void OverrideOutputImage(Data::Instance<RPI::AttachmentImage> image);
 
         private:
 
@@ -80,9 +105,12 @@ namespace AZ
 
             // PassAttachment for the rendered cubemap face
             Ptr<PassAttachment> m_passAttachment;
+            Ptr<PassAttachment> m_outputPassAttachment;
 
             // the child pass used to drive rendering of the cubemap pipeline
             Ptr<Pass> m_childPass = nullptr;
+            Ptr<Pass> m_copyPass = nullptr;
+            AZStd::array<Ptr<Pass>, NumCubeMapFaces> m_facePasses;
 
             // attachment readback which copies the rendered cubemap faces to the m_textureData buffers
             AZStd::shared_ptr<AZ::RPI::AttachmentReadback> m_attachmentReadback;
@@ -113,6 +141,12 @@ namespace AZ
 
             // lock for managing state between this object and the callback
             AZStd::mutex m_readBackLock;
+
+            Data::Instance<RPI::AttachmentImage> m_overrideImage = nullptr;
+
+            bool m_needToUpdateChildren = false;
+
+            u16 m_faceID;
         };
 
     }   // namespace RPI

@@ -19,11 +19,27 @@
 #include <Atom/RPI.Public/RenderPipeline.h>
 #include <Atom/RHI/RHISystemInterface.h>
 #include <Atom/RPI.Public/View.h>
+#include <Atom/RPI.Public/Pass/PassFilter.h>
+#include <Atom/RPI.Public/Pass/RenderPass.h>
 
 namespace AZ
 {
     namespace RPI
     {
+        namespace EnvironmentCubeMapPass_private
+        {
+            static const AZStd::string IntermediateSlotName("TransientResult");
+            static const AZStd::string OutputSlotName("Output");
+
+            static const AZStd::string TransientResourceName("TransientResult");
+
+            static const AZStd::string CopyPassTemplateName("FullscreenCopyTemplate");
+            static const AZStd::string CopyPassName("Copy");
+            static const AZStd::string CopyPassInputName("Input");
+            static const AZStd::string CopyPassOutputName("Output");
+
+        } // EnvironmentCubeMapPass_private
+
         Ptr<EnvironmentCubeMapPass> EnvironmentCubeMapPass::Create(const PassDescriptor& passDescriptor)
         {
             Ptr<EnvironmentCubeMapPass> pass = aznew EnvironmentCubeMapPass(passDescriptor);
@@ -42,21 +58,7 @@ namespace AZ
             }
 
             m_position = passData->m_position;
-
-            // create the cubemap pipeline as a child of this pass
-            PassRequest childRequest;
-            childRequest.m_templateName = "EnvironmentCubeMapPipeline";
-            childRequest.m_passName = "Child";
-            
-            PassConnection childInputConnection;
-            childInputConnection.m_localSlot = "Output";
-            childInputConnection.m_attachmentRef.m_pass = "Parent";
-            childInputConnection.m_attachmentRef.m_attachment = "Output";
-            childRequest.m_connections.emplace_back(childInputConnection);
-
-            PassSystemInterface* passSystem = PassSystemInterface::Get();
-            m_childPass = passSystem->CreatePassFromRequest(&childRequest);
-            AZ_Assert(m_childPass, "EnvironmentCubeMap child pass is invalid");
+            m_faceID = passData->m_faceID;
 
             // setup viewport
             m_viewportState.m_minX = 0;
@@ -69,19 +71,6 @@ namespace AZ
             m_scissorState.m_minY = 0;
             m_scissorState.m_maxX = static_cast<int16_t>(CubeMapFaceSize);
             m_scissorState.m_maxY = static_cast<int16_t>(CubeMapFaceSize);
-
-            // create view
-            AZ::Name viewName(AZStd::string::format("%s_%s", childRequest.m_templateName.GetCStr(), childRequest.m_passName.GetCStr()));
-            m_view = RPI::View::CreateView(viewName, RPI::View::UsageReflectiveCubeMap);
-            
-            AZ::Matrix3x4 viewTransform;
-            const Vector3* basis = &CameraBasis[0][0];
-            viewTransform.SetBasisAndTranslation(basis[0], basis[1], basis[2], m_position);
-            m_view->SetCameraTransform(viewTransform);
-            
-            AZ::Matrix4x4 viewToClipMatrix;
-            MakePerspectiveFovMatrixRH(viewToClipMatrix, AZ::Constants::HalfPi, 1.0f, 0.1f, 100.0f, true);
-            m_view->SetViewToClipMatrix(viewToClipMatrix);
         }
 
         EnvironmentCubeMapPass::~EnvironmentCubeMapPass()
@@ -99,35 +88,118 @@ namespace AZ
                 m_pipeline->SetDefaultView(m_view);
             }
         }
-
-        void EnvironmentCubeMapPass::CreateChildPassesInternal()
-        {            
-            AddChild(m_childPass);
+        void EnvironmentCubeMapPass::OverrideOutputImage(Data::Instance<RPI::AttachmentImage> image)
+        {
+            m_overrideImage = image;
         }
+
 
         void EnvironmentCubeMapPass::BuildInternal()
         {
-            // create output image descriptor
-            m_outputImageDesc = RHI::ImageDescriptor::Create2D(RHI::ImageBindFlags::Color | RHI::ImageBindFlags::CopyRead, CubeMapFaceSize, CubeMapFaceSize, RHI::Format::R16G16B16A16_FLOAT);
+            // Create the transient image attachement used to run the render pipeline
+            {
+                m_outputImageDesc = RHI::ImageDescriptor::Create2D(
+                    RHI::ImageBindFlags::Color | RHI::ImageBindFlags::ShaderReadWrite | RHI::ImageBindFlags::CopyRead, CubeMapFaceSize, CubeMapFaceSize,
+                    RHI::Format::R16G16B16A16_FLOAT);
 
-            // create output PassAttachment
-            m_passAttachment = aznew PassAttachment();
-            m_passAttachment->m_name = "Output";
-            AZ::Name attachmentPath(AZStd::string::format("%s.%s", GetPathName().GetCStr(), m_passAttachment->m_name.GetCStr()));
-            m_passAttachment->m_path = attachmentPath;
-            m_passAttachment->m_lifetime = RHI::AttachmentLifetimeType::Transient;
-            m_passAttachment->m_descriptor = m_outputImageDesc;
+                // create output PassAttachment
+                m_passAttachment = aznew PassAttachment();
+                m_passAttachment->m_name = EnvironmentCubeMapPass_private::TransientResourceName;
+                AZ::Name attachmentPath(AZStd::string::format("%s.%s", GetPathName().GetCStr(), m_passAttachment->m_name.GetCStr()));
+                m_passAttachment->m_path = attachmentPath;
+                m_passAttachment->m_lifetime = RHI::AttachmentLifetimeType::Transient;
+                m_passAttachment->m_descriptor = m_outputImageDesc;
 
-            // create pass attachment binding
-            PassAttachmentBinding outputAttachment;
-            outputAttachment.m_name = "Output";
-            outputAttachment.m_slotType = PassSlotType::InputOutput;
-            outputAttachment.m_attachment = m_passAttachment;
-            outputAttachment.m_scopeAttachmentUsage = RHI::ScopeAttachmentUsage::RenderTarget;
+                // create pass attachment binding
+                PassAttachmentBinding outputAttachment;
+                outputAttachment.m_name = EnvironmentCubeMapPass_private::IntermediateSlotName;
+                outputAttachment.m_slotType = PassSlotType::InputOutput;
+                outputAttachment.m_attachment = m_passAttachment;
+                outputAttachment.m_scopeAttachmentUsage = RHI::ScopeAttachmentUsage::RenderTarget;
 
-            m_attachmentBindings.push_back(outputAttachment);
+                m_attachmentBindings.push_back(outputAttachment);
+            }
+
+            // Create the output (imported) image attachement
+            {
+                m_outputPassAttachment = aznew PassAttachment();
+                m_outputPassAttachment->m_name = "Output";
+                m_outputPassAttachment->m_importedResource = m_overrideImage;
+                m_outputPassAttachment->m_lifetime = RHI::AttachmentLifetimeType::Imported;
+                m_outputPassAttachment->m_descriptor = m_overrideImage->GetDescriptor();
+                m_outputPassAttachment->ComputePathName(GetPathName());
+
+                // create pass attachment binding
+                PassAttachmentBinding outputAttachment;
+                outputAttachment.m_name = EnvironmentCubeMapPass_private::OutputSlotName;
+                outputAttachment.m_slotType = PassSlotType::InputOutput;
+                outputAttachment.m_attachment = m_outputPassAttachment;
+                outputAttachment.m_scopeAttachmentUsage = RHI::ScopeAttachmentUsage::RenderTarget;
+
+                m_attachmentBindings.push_back(outputAttachment);
+
+            }
 
             ParentPass::BuildInternal();
+        }
+
+        void EnvironmentCubeMapPass::CreateChildPassesInternal()
+        {
+            PassSystemInterface* passSystem = PassSystemInterface::Get();
+
+            // First create the user defined pipeline for cubemap rendering
+            {
+                PassRequest childRequest;
+                childRequest.m_templateName = "EnvironmentCubeMapPipeline";
+                childRequest.m_passName = "Face";
+
+                PassConnection childInputConnection;
+                childInputConnection.m_localSlot = "Output";
+                childInputConnection.m_attachmentRef.m_pass = "Parent";
+                childInputConnection.m_attachmentRef.m_attachment = EnvironmentCubeMapPass_private::IntermediateSlotName;
+                childRequest.m_connections.emplace_back(childInputConnection);
+
+                m_childPass = passSystem->CreatePassFromRequest(&childRequest);
+                AddChild(m_childPass);
+            }
+
+            // Create the copy pipeline
+            {
+                // [IRC:TP 18-02-22]
+                // USE CLONE!!!!!
+                // Not using clone here will directly edit the library version, breaking any following passes!
+                AZStd::shared_ptr<RPI::PassTemplate> copyPassTemplate =
+                    RPI::PassSystemInterface::Get()->GetPassTemplate(AZ::Name(EnvironmentCubeMapPass_private::CopyPassTemplateName))->Clone();
+                for (PassSlot& slot : copyPassTemplate->m_slots)
+                {
+                    if (slot.m_name == AZ::Name(EnvironmentCubeMapPass_private::CopyPassOutputName))
+                    {
+                        slot.m_imageViewDesc = AZStd::make_shared<RHI::ImageViewDescriptor>();
+                        slot.m_imageViewDesc->m_mipSliceMin = 0;
+                        slot.m_imageViewDesc->m_mipSliceMax = 0;
+                        slot.m_imageViewDesc->m_arraySliceMin = m_faceID;
+                        slot.m_imageViewDesc->m_arraySliceMax = m_faceID;
+                        slot.m_imageViewDesc->m_isCubemap = true;
+
+                        break;
+                    }
+                }
+
+                PassConnection copyInputConnection;
+                copyInputConnection.m_localSlot = EnvironmentCubeMapPass_private::CopyPassInputName;
+                copyInputConnection.m_attachmentRef.m_pass = "Parent";
+                copyInputConnection.m_attachmentRef.m_attachment = EnvironmentCubeMapPass_private::IntermediateSlotName;
+                copyPassTemplate->AddOutputConnection(copyInputConnection);
+
+                PassConnection copyOutputConnection;
+                copyOutputConnection.m_localSlot = EnvironmentCubeMapPass_private::CopyPassOutputName;
+                copyOutputConnection.m_attachmentRef.m_pass = "Parent";
+                copyOutputConnection.m_attachmentRef.m_attachment = EnvironmentCubeMapPass_private::OutputSlotName;
+                copyPassTemplate->AddOutputConnection(copyOutputConnection);
+
+                m_copyPass = passSystem->CreatePassFromTemplate(copyPassTemplate, AZ::Name(EnvironmentCubeMapPass_private::CopyPassName));
+                AddChild(m_copyPass);
+            }
         }
 
         void EnvironmentCubeMapPass::FrameBeginInternal(FramePrepareParams params)
@@ -137,52 +209,42 @@ namespace AZ
 
             RHI::FrameGraphAttachmentInterface attachmentDatabase = params.m_frameGraphBuilder->GetAttachmentDatabase();
             attachmentDatabase.CreateTransientImage(RHI::TransientImageDescriptor(m_passAttachment->GetAttachmentId(), m_outputImageDesc));
+            attachmentDatabase.ImportImage(m_outputPassAttachment->GetAttachmentId(), m_overrideImage->GetRHIImage());
 
-            m_readBackLock.lock();
-            if (!m_attachmentReadback || !m_readBackRequested)
-            {
-                // create the AttachmentReadback if this is the first time in FramePrepare, or we finished with the last readback
-                // in which case we will free the previous one and allocate a new one
-                m_attachmentReadback = AZStd::make_shared<AZ::RPI::AttachmentReadback>(AZ::RHI::ScopeId{ "EnvironmentCubeMapReadBack" });
-                m_attachmentReadback->SetCallback(AZStd::bind(&EnvironmentCubeMapPass::AttachmentReadbackCallback, this, AZStd::placeholders::_1));
-            }
-            m_readBackLock.unlock();
-
-            ParentPass::FrameBeginInternal(params);
-
-            // Note: this needs to be after the call to ParentPass::FrameBeginInternal in order to setup the scopes correctly for readback
-            m_attachmentReadback->FrameBegin(params);
+            ParentPass::FrameBeginInternal(params);;
         }
 
         void EnvironmentCubeMapPass::FrameEndInternal()
         {
-            m_readBackLock.lock();
-            if (m_renderFace < NumCubeMapFaces)
-            {
-                if (!m_readBackRequested)
-                {
-                    // delay a number of frames before requesting the readback
-                    if (m_readBackDelayFrames < NumReadBackDelayFrames)
-                    {
-                        m_readBackDelayFrames++;
-                    }
-                    else
-                    {
-                        m_readBackRequested = true;
-                        AZStd::string readbackName = AZStd::string::format("%s_%s", m_passAttachment->GetAttachmentId().GetCStr(), GetName().GetCStr());
-                        m_attachmentReadback->ReadPassAttachment(m_passAttachment.get(), AZ::Name(readbackName));
-                    }
-                }
+            // [IRC:TP 18-02-22] TODO: Renable the readback feature (will be in the feature processor tho)
+            // 
+            //m_readBackLock.lock();
+            //if (m_renderFace < NumCubeMapFaces)
+            //{
+            //    if (!m_readBackRequested)
+            //    {
+            //        // delay a number of frames before requesting the readback
+            //        if (m_readBackDelayFrames < NumReadBackDelayFrames)
+            //        {
+            //            m_readBackDelayFrames++;
+            //        }
+            //        else
+            //        {
+            //            m_readBackRequested = true;
+            //            AZStd::string readbackName = AZStd::string::format("%s_%s", m_passAttachment->GetAttachmentId().GetCStr(), GetName().GetCStr());
+            //            m_attachmentReadback->ReadPassAttachment(m_passAttachment.get(), AZ::Name(readbackName));
+            //        }
+            //    }
 
-                // set the appropriate render camera transform for the next frame
-                AZ::Matrix3x4 viewTransform;
-                const Vector3* basis = &CameraBasis[m_renderFace][0];
-                viewTransform.SetBasisAndTranslation(basis[0], basis[1], basis[2], m_position);
+            //    // set the appropriate render camera transform for the next frame
+            //    AZ::Matrix3x4 viewTransform;
+            //    const Vector3* basis = &CameraBasis[m_renderFace][0];
+            //    viewTransform.SetBasisAndTranslation(basis[0], basis[1], basis[2], m_position);
 
-                m_view->SetCameraTransform(viewTransform);
-                m_pipeline->SetDefaultView(m_view);
-            }
-            m_readBackLock.unlock();
+            //    m_view->SetCameraTransform(viewTransform);
+            //    m_pipeline->SetDefaultView(m_view);
+            //}
+            //m_readBackLock.unlock();
 
             ParentPass::FrameEndInternal();
         }      

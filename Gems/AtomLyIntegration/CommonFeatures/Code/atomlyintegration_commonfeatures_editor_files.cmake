@@ -24,6 +24,8 @@ set(FILES
     Source/DiffuseGlobalIllumination/EditorDiffuseProbeGridComponent.cpp
     Source/DiffuseGlobalIllumination/EditorDiffuseGlobalIlluminationComponent.h
     Source/DiffuseGlobalIllumination/EditorDiffuseGlobalIlluminationComponent.cpp
+    Source/ProbeGlobalIllumination/EditorProbeGlobalIlluminationComponent.h
+    Source/ProbeGlobalIllumination/EditorProbeGlobalIlluminationComponent.cpp
     Source/Grid/EditorGridComponent.h
     Source/Grid/EditorGridComponent.cpp
     Source/ImageBasedLights/EditorImageBasedLightComponent.h

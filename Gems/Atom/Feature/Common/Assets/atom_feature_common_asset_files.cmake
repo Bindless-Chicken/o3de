@@ -6,7 +6,14 @@
 # 
 
 set(FILES
+    Materials/CubemapVisualization/CubemapVisualization.azsl
+    Materials/CubemapVisualization/CubemapVisualization.materialtype
+    Materials/CubemapVisualization/CubemapVisualization.shader
     Materials/ReflectionProbe/ReflectionProbeVisualization.materialtype
+    Materials/Special/DebugVertexStreams.azsl
+    Materials/Special/DebugVertexStreams.materialtype
+    Materials/Special/DebugVertexStreams.shader
+    Materials/Special/DebugVertexStreams_IncompatibleEnums.lua
     Materials/Special/ShadowCatcher.azsl
     Materials/Special/ShadowCatcher.materialtype
     Materials/Special/ShadowCatcher.shader
@@ -29,6 +36,7 @@ set(FILES
     Materials/Types/BasePBR_LowEndForward.shader
     Materials/Types/DepthPass_WithPS.azsli
     Materials/Types/EnhancedPBR.materialtype
+    Materials/Types/EnhancedPBR_Anisotropy.lua
     Materials/Types/EnhancedPBR_Common.azsli
     Materials/Types/EnhancedPBR_DepthPass_WithPS.azsl
     Materials/Types/EnhancedPBR_DepthPass_WithPS.shader
@@ -43,6 +51,7 @@ set(FILES
     Materials/Types/Skin.materialtype
     Materials/Types/Skin.shader
     Materials/Types/Skin_Common.azsli
+    Materials/Types/Skin_SpecularF0.lua
     Materials/Types/Skin_WrinkleMaps.lua
     Materials/Types/StandardMultilayerPBR.materialtype
     Materials/Types/StandardMultilayerPBR_ClearCoatEnableFeature.lua
@@ -142,6 +151,10 @@ set(FILES
     Passes/DiffuseProbeGridRelocation.pass
     Passes/DiffuseProbeGridRender.pass
     Passes/DiffuseProbeGridUpdate.pass
+    Passes/DiffuseProbeGridVisualizationAccelerationStructure.pass
+    Passes/DiffuseProbeGridVisualizationComposite.pass
+    Passes/DiffuseProbeGridVisualizationPrepare.pass
+    Passes/DiffuseProbeGridVisualizationRayTracing.pass
     Passes/DiffuseSpecularMerge.pass
     Passes/DisplayMapper.pass
     Passes/DownsampleLuminanceMinAvgMaxCS.pass
@@ -376,6 +389,8 @@ set(FILES
     Shaders/DiffuseGlobalIllumination/DiffuseProbeGridDownsample.azsl
     Shaders/DiffuseGlobalIllumination/DiffuseProbeGridDownsample.shader
     Shaders/DiffuseGlobalIllumination/DiffuseProbeGridDownsample_nomsaa.azsl
+    Shaders/DiffuseGlobalIllumination/DiffuseProbeGridVisualizationComposite.azsl
+    Shaders/DiffuseGlobalIllumination/DiffuseProbeGridVisualizationComposite.shader
     Shaders/ImGui/ImGui.azsl
     Shaders/ImGui/ImGui.shader
     Shaders/LightCulling/LightCulling.azsl

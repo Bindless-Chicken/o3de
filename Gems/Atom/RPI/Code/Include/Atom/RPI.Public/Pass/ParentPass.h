@@ -76,6 +76,9 @@ namespace AZ
             template<typename PassType>
             Ptr<PassType> FindChildPass() const;
 
+            template<typename PassType>
+            void FindChildPass(AZStd::function<PassFilterExecutionFlow(Ptr<PassType>)> passFunction) const;
+
             //! Gets the list of children. Useful for validating hierarchies
             AZStd::span<const Ptr<Pass>> GetChildren() const;
 
@@ -166,6 +169,24 @@ namespace AZ
                 }
             }
             return {};
+        }
+
+        
+        template<typename PassType>
+        inline void ParentPass::FindChildPass(AZStd::function<PassFilterExecutionFlow(Ptr<PassType>)> passFunction) const
+        {
+            for (const Ptr<Pass>& child : m_children)
+            {
+                PassType* pass = azrtti_cast<PassType*>(child.get());
+                if (pass)
+                {
+                    PassFilterExecutionFlow executionFlow = passFunction(pass);
+                    if (executionFlow == PassFilterExecutionFlow::StopVisitingPasses)
+                    {
+                        return;
+                    }
+                }
+            }
         }
 
     }   // namespace RPI
