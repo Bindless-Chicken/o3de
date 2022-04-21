@@ -47,16 +47,29 @@ namespace AZ
 
         void BufferPoolResolver::Compile(const RHI::HardwareQueueClass hardwareClass)
         {
+            // [IRC:TP] TEMP FIX AR000JB03D
+            // Unmap all the staging buffers
+            for (const BufferUploadPacket& packet : m_uploadPackets)
+            {
+                packet.m_stagingBuffer->GetBufferMemoryView()->Unmap(RHI::HostMemoryAccess::Write);
+            }
+
+            BuildUniquePacketList();
+
+            // Clear our original list of packets to release owning references
+            m_uploadPackets.clear();
+            // END [IRC:TP] TEMP FIX AR000JB03D
+
             auto supportedQueuePipelineStages = m_device.GetCommandQueueContext().GetCommandQueue(hardwareClass).GetSupportedPipelineStages();
 
             VkBufferMemoryBarrier barrier{};
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
             barrier.pNext = nullptr;
 
-            for (BufferUploadPacket& packet : m_uploadPackets)
+            // [IRC:TP] TEMP FIX AR000JB03D
+            for (const BufferUploadPacket& packet : m_uniqueUploadPackets)
+            // END [IRC:TP] TEMP FIX AR000JB03D
             {
-                packet.m_stagingBuffer->GetBufferMemoryView()->Unmap(RHI::HostMemoryAccess::Write);
-
                 // Filter stages and access flags
                 VkPipelineStageFlags bufferPipelineFlags = RHI::FilterBits(GetResourcePipelineStateFlags(packet.m_attachmentBuffer->GetDescriptor().m_bindFlags), supportedQueuePipelineStages);
                 VkAccessFlags bufferAccessFlags = RHI::FilterBits(GetResourceAccessFlags(packet.m_attachmentBuffer->GetDescriptor().m_bindFlags), GetSupportedAccessFlags(bufferPipelineFlags));
@@ -94,7 +107,10 @@ namespace AZ
         void BufferPoolResolver::Resolve(CommandList& commandList)
         {
             auto& device = static_cast<Device&>(commandList.GetDevice());
-            for (const BufferUploadPacket& packet : m_uploadPackets)
+
+            // [IRC:TP] TEMP FIX AR000JB03D
+            for (const BufferUploadPacket& packet : m_uniqueUploadPackets)
+            // END [IRC:TP] TEMP FIX AR000JB03D
             {
                 Buffer* stagingBuffer = packet.m_stagingBuffer.get();
                 Buffer* destBuffer = packet.m_attachmentBuffer;
@@ -118,6 +134,10 @@ namespace AZ
             m_uploadPackets.clear();
             m_epilogueBarriers.clear();
             m_prologueBarriers.clear();
+
+            // [IRC:TP] TEMP FIX AR000JB03D
+            m_uniqueUploadPackets.clear();
+            // END [IRC:TP] TEMP FIX AR000JB03D
         }
 
         template<class T, class Predicate>
@@ -193,5 +213,76 @@ namespace AZ
                     nullptr);
             }
         }
+
+        // [IRC:TP] TEMP FIX AR000JB03D
+        void BufferPoolResolver::BuildUniquePacketList()
+        {
+            // This struct acts as a hasher for the unordered set below.
+            struct UploadPacketHasher
+            {
+                std::size_t operator()(const BufferUploadPacket& packet) const
+                {
+                    return reinterpret_cast<size_t>(packet.m_attachmentBuffer->GetBufferMemoryView()->GetNativeBuffer());
+                }
+            };
+
+            // This struct acts as an equality comparator for the unordered set below.
+            struct UploadPacketComparator
+            {
+                bool operator()(const BufferUploadPacket& lhs, const BufferUploadPacket& rhs) const
+                {
+                    if (lhs.m_attachmentBuffer->GetBufferMemoryView()->GetNativeBuffer() != rhs.m_attachmentBuffer->GetBufferMemoryView()->GetNativeBuffer())
+                    {
+                        return false;
+                    }
+
+                    // New insertion
+                    const size_t lhsStart = lhs.m_attachmentBuffer->GetBufferMemoryView()->GetOffset() + lhs.m_byteOffset;
+                    const size_t lhsEnd = lhsStart + lhs.m_byteSize - 1;
+
+                    // Existing
+                    const size_t rhsStart = rhs.m_attachmentBuffer->GetBufferMemoryView()->GetOffset() + rhs.m_byteOffset;
+                    const size_t rhsEnd = rhsStart + rhs.m_byteSize - 1;
+
+                    // The new range is fully contained in the existing range, no problem
+                    if (lhsStart >= rhsStart && lhsEnd <= rhsEnd)
+                    {
+                        AZ_TracePrintfOnce("BufferPoolResolver", "Detected fully contained range in %s, skipping the upload.\n", lhs.m_attachmentBuffer->GetName().GetCStr());
+                        return true;
+                    }
+                    // The new range is not fully contained in the existing range, this could lead to missing data!
+                    else if (rhsEnd >= lhsStart && lhsEnd >= rhsStart)
+                    {
+                        AZ_Error("BufferPoolResolver", false, "Detected overlaping ranges in %s, skipping the upload. This may lead to missing data in one of the mapped range.", lhs.m_attachmentBuffer->GetName().GetCStr());
+                        return true;
+                    }
+
+                    return false;
+                }
+            };
+
+            // This set keeps a list of unique upload packets. The key is the address of the buffer being inserted. For tie breaker
+            // the equality functions compares the ranges, thus allowing multiple writes to the same buffer at different locations
+            // to occur.
+            using UniqueBufferList_t = AZStd::unordered_set<BufferUploadPacket, UploadPacketHasher, UploadPacketComparator>;
+            UniqueBufferList_t uniqueBufferList;
+
+            // Run in reverse order of insertion to ensure we always enqueue
+            // the most recent upload request.
+            for (auto it = m_uploadPackets.rbegin(); it < m_uploadPackets.rend(); ++it)
+            {
+                const BufferUploadPacket& uploadPacket = *it;
+
+                const AZStd::pair<UniqueBufferList_t::iterator, bool> insertQuery = uniqueBufferList.insert(uploadPacket);
+
+                // If that was the first insertion
+                if (insertQuery.second == true)
+                {
+                    m_uniqueUploadPackets.push_back(uploadPacket);
+                }
+            }
+
+        }
+        // END [IRC:TP] TEMP FIX AR000JB03D
     }
 }

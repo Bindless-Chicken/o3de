@@ -66,6 +66,19 @@ namespace AZ
             AZStd::vector<BufferUploadPacket> m_uploadPackets;
             AZStd::vector<BarrierInfo> m_prologueBarriers;
             AZStd::vector<BarrierInfo> m_epilogueBarriers;
+
+            // [IRC:TP] TEMP FIX AR000JB03D: This function will go through all
+            // the upload packets in reverse order of insertion and remove
+            // duplicates. Duplicated uploads causes an issue on Mali where
+            // both uploads can create a race condition corrupting the uploaded data.
+            // That fix will create a list containing only one entry per buffer,
+            // that entry is then used for any subsequent operation.
+            // The filtering is not done at insertion time to retain the
+            // default behaviour and still unmap the staging buffer in the
+            // compile step.
+            void BuildUniquePacketList();
+            AZStd::vector<BufferUploadPacket> m_uniqueUploadPackets;
+            // END [IRC:TP] TEMP FIX AR000JB03D
         };
     }
 }
