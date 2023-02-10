@@ -222,7 +222,7 @@ namespace AZ
             // Stage profile name parameter
             // Note: RayTracing shaders must be compiled with version 6_3, while the rest of the stages
             // are compiled with version 6_2, so RayTracing cannot share the version constant.
-            const AZStd::string shaderModelVersion = "6_2";
+            const AZStd::string shaderModelVersion = "6_6";
             const AZStd::unordered_map<RHI::ShaderHardwareStage, AZStd::string> stageToProfileName =
             {
                 {RHI::ShaderHardwareStage::Vertex,                 "vs_" + shaderModelVersion},

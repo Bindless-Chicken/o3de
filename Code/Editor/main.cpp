@@ -6,6 +6,14 @@
  *
  */
 
+extern "C" {
+__declspec(dllexport) extern const unsigned int D3D12SDKVersion = 608;
+}
+
+extern "C" {
+__declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\";
+}
+
 #include <AzCore/Module/DynamicModuleHandle.h>
 #include <AzFramework/ProjectManager/ProjectManager.h>
 
