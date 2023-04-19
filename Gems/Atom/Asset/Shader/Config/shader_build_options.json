@@ -10,7 +10,8 @@
                 , "--strip-unused-srgs" // Remove unreferenced SRGs.
                 , "--root-const=128"
         ],
-        "dxc": ["-Zpr" // Row major matrices.
+        "dxc": ["-Zpr", // Row major matrices.
+            "-fspv-target-env=vulkan1.1"
         ],
         // The following apply for all Metal based platforms.
         "spirv-cross": ["--msl"

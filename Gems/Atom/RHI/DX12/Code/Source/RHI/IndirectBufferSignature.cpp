@@ -30,6 +30,8 @@ namespace AZ
 
             const PipelineState* pipelineState = static_cast<const PipelineState*>(descriptor.m_pipelineState);
 
+            bool requiresRootSignature = false;
+
             // Calculate the offset of the commands and the stride of the whole sequence.
             AZStd::vector<D3D12_INDIRECT_ARGUMENT_DESC> argumentsDesc(commands.size());
             m_stride = 0;
@@ -57,10 +59,12 @@ namespace AZ
                     argDesc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_VERTEX_BUFFER_VIEW;
                     argDesc.VertexBuffer.Slot = command.m_vertexBufferArgs.m_slot;
                     m_stride += sizeof(D3D12_VERTEX_BUFFER_VIEW);
+                    requiresRootSignature |= true;
                     break;
                 case RHI::IndirectCommandType::IndexBufferView:
                     argDesc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_INDEX_BUFFER_VIEW;
                     m_stride += sizeof(D3D12_INDEX_BUFFER_VIEW);
+                    requiresRootSignature |= true;
                     break;
                 case RHI::IndirectCommandType::RootConstants:
                 {
@@ -77,6 +81,7 @@ namespace AZ
                     argDesc.Constant.RootParameterIndex = pipelineState->GetPipelineLayout().GetRootConstantsRootParameterIndex().GetIndex();
 
                     m_stride += sizeof(uint32_t) * argDesc.Constant.Num32BitValuesToSet;
+                    requiresRootSignature |= true;
                     break;
                 }
                 default:
@@ -93,7 +98,7 @@ namespace AZ
             desc.pArgumentDescs = argumentsDesc.data();
 
             Microsoft::WRL::ComPtr<ID3D12CommandSignature> signatureComPtr;
-            HRESULT  hr = device.GetDevice()->CreateCommandSignature(&desc, rootSignature, IID_GRAPHICS_PPV_ARGS(signatureComPtr.GetAddressOf()));
+            HRESULT  hr = device.GetDevice()->CreateCommandSignature(&desc, (requiresRootSignature ? rootSignature : nullptr), IID_GRAPHICS_PPV_ARGS(signatureComPtr.GetAddressOf()));
             if (!device.AssertSuccess(hr))
             {
                 return RHI::ResultCode::Fail;
